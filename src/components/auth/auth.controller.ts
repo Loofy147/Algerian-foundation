@@ -6,6 +6,11 @@ import config from '../../config';
 
 const prisma = new PrismaClient();
 
+// Helper to check if the error is a Prisma unique constraint violation
+function isPrismaP2002Error(error: unknown): error is { code: 'P2002' } {
+  return typeof error === 'object' && error !== null && 'code' in error && (error as any).code === 'P2002';
+}
+
 export const register = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
@@ -27,7 +32,7 @@ export const register = async (req: Request, res: Response) => {
 
     res.status(201).json({ message: 'User registered successfully', token });
   } catch (error) {
-    if (error.code === 'P2002') {
+    if (isPrismaP2002Error(error)) {
       return res.status(409).json({ error: 'A user with this email already exists' });
     }
     res.status(500).json({ error: 'An error occurred during registration' });

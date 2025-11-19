@@ -1,25 +1,29 @@
-# ---- Base Stage ----
-FROM public.ecr.aws/k9x5n2l5/shopper-node-18-alpine AS base
+# Use an official Node.js runtime as a parent image
+FROM public.ecr.aws/k9x5n2l5/shopper-node-18-alpine
+
+# Set the working directory in the container
 WORKDIR /usr/src/app
+
+# Copy package.json and package-lock.json to the working directory
 COPY package*.json ./
 
-# ---- Dependencies Stage ----
-FROM base AS dependencies
-RUN npm install --omit=dev
-
-# ---- Build Stage ----
-FROM base AS build
+# Install any needed packages
 RUN npm install
+
+# Bundle app source
 COPY . .
+
+# Generate Prisma Client
+RUN npx prisma generate
+
+# Compile TypeScript to JavaScript
 RUN npm run build
 
-# ---- Production Stage ----
-FROM public.ecr.aws/k9x5n2l5/shopper-node-18-alpine AS production
-WORKDIR /usr/src/app
-COPY --from=dependencies /usr/src/app/node_modules ./node_modules
-COPY --from=build /usr/src/app/dist ./dist
-COPY package*.json ./
-
+# Make port 80 available to the world outside this container
 EXPOSE 8080
+
+# Define environment variable
 ENV NODE_ENV=production
+
+# Run the app when the container launches
 CMD ["node", "dist/index.js"]
